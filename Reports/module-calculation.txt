@@ -1,0 +1,13 @@
+PV Engineer Toolkit - Module Calculation
+
+Target power:       100 kWp
+Selected module:    Trina Vertex S+
+Module power:       450 W
+Required modules:   223
+Installed DC power: 100.35 kWp
+
+Electrical data:
+Voc: 49.5 V
+Vmp: 41.2 V
+Imp: 10.92 A
+Isc: 11.48 A
