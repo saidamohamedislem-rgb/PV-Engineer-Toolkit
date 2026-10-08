@@ -1,0 +1,26 @@
+﻿[
+  {
+    "Name": "Sample Commercial Inverter 75kW",
+    "ACPowerKW": 75,
+    "MaxDCPowerKW": 112.5,
+    "MaxDCVoltage": 1000,
+    "MPPT": 6,
+    "Inputs": 12
+  },
+  {
+    "Name": "Sample Commercial Inverter 100kW",
+    "ACPowerKW": 100,
+    "MaxDCPowerKW": 150,
+    "MaxDCVoltage": 1000,
+    "MPPT": 10,
+    "Inputs": 20
+  },
+  {
+    "Name": "Sample Commercial Inverter 110kW",
+    "ACPowerKW": 110,
+    "MaxDCPowerKW": 165,
+    "MaxDCVoltage": 1100,
+    "MPPT": 12,
+    "Inputs": 24
+  }
+]
