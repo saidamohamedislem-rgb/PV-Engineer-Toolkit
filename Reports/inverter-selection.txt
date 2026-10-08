@@ -1,0 +1,42 @@
+PV Engineer Toolkit - Inverter Selection
+
+Target power:       100 kWp
+Selected module:    Trina Vertex S+
+Required modules:   223
+Installed DC power: 100.35 kWp
+
+Compatible inverter candidates:
+Inverter:           Sample Commercial Inverter 75kW
+AC power:           75 kW
+Max DC power:       112.5 kW
+Max DC voltage:     1000 V
+MPPT:               6
+Inputs:             12
+Required strings:   12
+Highest Voc:        940.5 V
+Highest Vmp:        782.8 V
+DC/AC ratio:        1.34
+Status:             OK
+Inverter:           Sample Commercial Inverter 100kW
+AC power:           100 kW
+Max DC power:       150 kW
+Max DC voltage:     1000 V
+MPPT:               10
+Inputs:             20
+Required strings:   12
+Highest Voc:        940.5 V
+Highest Vmp:        782.8 V
+DC/AC ratio:        1
+Status:             OK
+Inverter:           Sample Commercial Inverter 110kW
+AC power:           110 kW
+Max DC power:       165 kW
+Max DC voltage:     1100 V
+MPPT:               12
+Inputs:             24
+Required strings:   11
+Highest Voc:        1039.5 V
+Highest Vmp:        865.2 V
+DC/AC ratio:        0.91
+Status:             OK
+

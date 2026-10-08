@@ -1,8 +1,9 @@
 ﻿Clear-Host
 
-$Version = "0.3"
+$Version = "0.4"
 $RootPath = Split-Path -Parent $PSScriptRoot
 $ModuleDatabasePath = Join-Path $RootPath "Data\modules.json"
+$InverterDatabasePath = Join-Path $RootPath "Data\inverters.json"
 $ReportsPath = Join-Path $RootPath "Reports"
 
 function Convert-ToNumber {
@@ -25,6 +26,17 @@ function Load-PVModules {
     }
 
     return Get-Content $ModuleDatabasePath -Raw | ConvertFrom-Json
+}
+
+function Load-Inverters {
+
+    if (-not (Test-Path $InverterDatabasePath)) {
+        Write-Host "Inverter database not found: $InverterDatabasePath" -ForegroundColor Red
+        Pause
+        return $null
+    }
+
+    return Get-Content $InverterDatabasePath -Raw | ConvertFrom-Json
 }
 
 function Select-PVModule {
@@ -280,6 +292,192 @@ Extra strings:            $extraStrings
     Pause
 }
 
+function Show-InverterSelector {
+
+    Clear-Host
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host "              INVERTER SELECTOR"
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $selectedModule = Select-PVModule
+
+    if ($null -eq $selectedModule) {
+        return
+    }
+
+    $inverters = Load-Inverters
+
+    if ($null -eq $inverters) {
+        return
+    }
+
+    Write-Host ""
+
+    $targetInput = Read-Host "Target PV power in kWp"
+    $targetPowerKWp = Convert-ToNumber $targetInput
+
+    $requiredModules = [math]::Ceiling(($targetPowerKWp * 1000) / $selectedModule.Power)
+    $installedPowerKWp = [math]::Round(($requiredModules * $selectedModule.Power) / 1000, 2)
+
+    $results = @()
+
+    foreach ($inverter in $inverters) {
+
+        $maxModulesPerString = [math]::Floor($inverter.MaxDCVoltage / $selectedModule.Voc)
+
+        if ($maxModulesPerString -lt 1) {
+            continue
+        }
+
+        $stringsNeeded = [math]::Ceiling($requiredModules / $maxModulesPerString)
+
+        $baseModulesPerString = [math]::Floor($requiredModules / $stringsNeeded)
+        $extraStrings = $requiredModules % $stringsNeeded
+
+        if ($extraStrings -gt 0) {
+            $highestModulesPerString = $baseModulesPerString + 1
+        }
+        else {
+            $highestModulesPerString = $baseModulesPerString
+        }
+
+        $highestVoc = [math]::Round($highestModulesPerString * $selectedModule.Voc, 2)
+        $highestVmp = [math]::Round($highestModulesPerString * $selectedModule.Vmp, 2)
+
+        $dcAcRatio = [math]::Round($installedPowerKWp / $inverter.ACPowerKW, 2)
+
+        $isVoltageOk = $highestVoc -le $inverter.MaxDCVoltage
+        $isDcPowerOk = $installedPowerKWp -le $inverter.MaxDCPowerKW
+        $isInputOk = $stringsNeeded -le $inverter.Inputs
+        $isRatioOk = $dcAcRatio -ge 0.8 -and $dcAcRatio -le 1.5
+
+        $status = "OK"
+
+        if (-not $isVoltageOk) {
+            $status = "Voltage too high"
+        }
+        elseif (-not $isDcPowerOk) {
+            $status = "DC power too high"
+        }
+        elseif (-not $isInputOk) {
+            $status = "Not enough inputs"
+        }
+        elseif (-not $isRatioOk) {
+            $status = "DC/AC ratio not ideal"
+        }
+
+        $score = [math]::Abs($dcAcRatio - 1.2)
+
+        $results += [PSCustomObject]@{
+            Name = $inverter.Name
+            ACPowerKW = $inverter.ACPowerKW
+            MaxDCPowerKW = $inverter.MaxDCPowerKW
+            MaxDCVoltage = $inverter.MaxDCVoltage
+            MPPT = $inverter.MPPT
+            Inputs = $inverter.Inputs
+            RequiredStrings = $stringsNeeded
+            MaxModulesPerString = $maxModulesPerString
+            HighestVoc = $highestVoc
+            HighestVmp = $highestVmp
+            DCACRatio = $dcAcRatio
+            Status = $status
+            Score = $score
+        }
+    }
+
+    $compatible = $results | Where-Object { $_.Status -eq "OK" } | Sort-Object Score
+
+    Clear-Host
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host "             INVERTER SELECTION RESULT"
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host ""
+
+    Write-Host "Target power:          $targetPowerKWp kWp"
+    Write-Host "Selected module:       $($selectedModule.Name)"
+    Write-Host "Required modules:      $requiredModules"
+    Write-Host "Installed DC power:    $installedPowerKWp kWp"
+    Write-Host ""
+
+    Write-Host "Compatible inverter candidates:"
+    Write-Host ""
+
+    if ($compatible.Count -eq 0) {
+        Write-Host "No compatible inverter found." -ForegroundColor Red
+    }
+    else {
+        foreach ($item in $compatible) {
+            Write-Host "-----------------------------------------------"
+            Write-Host "Inverter:              $($item.Name)"
+            Write-Host "AC power:              $($item.ACPowerKW) kW"
+            Write-Host "Max DC power:          $($item.MaxDCPowerKW) kW"
+            Write-Host "Max DC voltage:        $($item.MaxDCVoltage) V"
+            Write-Host "MPPT:                  $($item.MPPT)"
+            Write-Host "Inputs:                $($item.Inputs)"
+            Write-Host "Required strings:      $($item.RequiredStrings)"
+            Write-Host "Highest string Voc:    $($item.HighestVoc) V"
+            Write-Host "Highest string Vmp:    $($item.HighestVmp) V"
+            Write-Host "DC/AC ratio:           $($item.DCACRatio)"
+            Write-Host "Status:                $($item.Status)"
+        }
+
+        $recommended = $compatible | Select-Object -First 1
+
+        Write-Host ""
+        Write-Host "Recommended inverter:" -ForegroundColor Yellow
+        Write-Host "$($recommended.Name) with DC/AC ratio $($recommended.DCACRatio)" -ForegroundColor Yellow
+    }
+
+    Write-Host ""
+
+    if (-not (Test-Path $ReportsPath)) {
+        New-Item -ItemType Directory -Path $ReportsPath | Out-Null
+    }
+
+    $reportFile = Join-Path $ReportsPath "inverter-selection.txt"
+
+    $reportContent = @"
+PV Engineer Toolkit - Inverter Selection
+
+Target power:       $targetPowerKWp kWp
+Selected module:    $($selectedModule.Name)
+Required modules:   $requiredModules
+Installed DC power: $installedPowerKWp kWp
+
+Compatible inverter candidates:
+
+"@
+
+    foreach ($item in $compatible) {
+        $reportContent += @"
+Inverter:           $($item.Name)
+AC power:           $($item.ACPowerKW) kW
+Max DC power:       $($item.MaxDCPowerKW) kW
+Max DC voltage:     $($item.MaxDCVoltage) V
+MPPT:               $($item.MPPT)
+Inputs:             $($item.Inputs)
+Required strings:   $($item.RequiredStrings)
+Highest Voc:        $($item.HighestVoc) V
+Highest Vmp:        $($item.HighestVmp) V
+DC/AC ratio:        $($item.DCACRatio)
+Status:             $($item.Status)
+
+"@
+    }
+
+    $reportContent | Set-Content $reportFile
+
+    Write-Host "Report saved to: $reportFile" -ForegroundColor Yellow
+    Write-Host ""
+
+    Pause
+}
+
 do {
 
     Show-Menu
@@ -303,9 +501,7 @@ do {
         }
 
         "4" {
-            Write-Host ""
-            Write-Host "Inverter Selector coming soon..."
-            Pause
+            Show-InverterSelector
         }
 
         "5" {
