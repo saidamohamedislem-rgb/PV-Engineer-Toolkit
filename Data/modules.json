@@ -1,0 +1,34 @@
+[
+  {
+    "Name": "Trina Vertex S+",
+    "Power": 450,
+    "Voc": 49.5,
+    "Vmp": 41.2,
+    "Imp": 10.92,
+    "Isc": 11.48
+  },
+  {
+    "Name": "JA Solar JAM54",
+    "Power": 460,
+    "Voc": 49.8,
+    "Vmp": 41.6,
+    "Imp": 11.05,
+    "Isc": 11.61
+  },
+  {
+    "Name": "Longi Hi-MO",
+    "Power": 455,
+    "Voc": 49.6,
+    "Vmp": 41.3,
+    "Imp": 11.01,
+    "Isc": 11.55
+  },
+  {
+    "Name": "Jinko Tiger Neo",
+    "Power": 470,
+    "Voc": 50.2,
+    "Vmp": 41.9,
+    "Imp": 11.22,
+    "Isc": 11.80
+  }
+]
