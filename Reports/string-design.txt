@@ -1,0 +1,17 @@
+PV Engineer Toolkit - String Design
+
+Target power:             100 kWp
+Selected module:          Trina Vertex S+
+Module power:             450 W
+Required modules:         223
+Installed DC power:       100.35 kWp
+
+Inverter max DC voltage:  1000 V
+Module Voc:               49.5 V
+Module Vmp:               41.2 V
+
+Maximum modules/string:   20
+Required strings:         12
+
+Base modules/string:      18
+Extra strings:            7

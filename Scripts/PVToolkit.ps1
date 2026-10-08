@@ -1,14 +1,12 @@
-Clear-Host
+﻿Clear-Host
 
-$Version = "0.2"
-$RootPath = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$Version = "0.3"
+$RootPath = Split-Path -Parent $PSScriptRoot
 $ModuleDatabasePath = Join-Path $RootPath "Data\modules.json"
 $ReportsPath = Join-Path $RootPath "Reports"
 
 function Convert-ToNumber {
-    param(
-        [string]$Value
-    )
+    param([string]$Value)
 
     $cleanValue = $Value.Replace(",", ".")
 
@@ -26,8 +24,36 @@ function Load-PVModules {
         return $null
     }
 
-    $modules = Get-Content $ModuleDatabasePath -Raw | ConvertFrom-Json
-    return $modules
+    return Get-Content $ModuleDatabasePath -Raw | ConvertFrom-Json
+}
+
+function Select-PVModule {
+
+    $modules = Load-PVModules
+
+    if ($null -eq $modules) {
+        return $null
+    }
+
+    Write-Host "Available PV modules:"
+    Write-Host ""
+
+    for ($i = 0; $i -lt $modules.Count; $i++) {
+        $number = $i + 1
+        Write-Host "$number - $($modules[$i].Name) | $($modules[$i].Power) W"
+    }
+
+    Write-Host ""
+
+    $moduleChoice = [int](Read-Host "Select module number")
+
+    if ($moduleChoice -lt 1 -or $moduleChoice -gt $modules.Count) {
+        Write-Host "Invalid module selection." -ForegroundColor Red
+        Pause
+        return $null
+    }
+
+    return $modules[$moduleChoice - 1]
 }
 
 function Show-Menu {
@@ -63,27 +89,16 @@ function Show-ModuleCalculator {
     Write-Host "===============================================" -ForegroundColor Cyan
     Write-Host ""
 
-    $modules = Load-PVModules
+    $selectedModule = Select-PVModule
 
-    if ($null -eq $modules) {
+    if ($null -eq $selectedModule) {
         return
-    }
-
-    Write-Host "Available PV modules:"
-    Write-Host ""
-
-    for ($i = 0; $i -lt $modules.Count; $i++) {
-        $number = $i + 1
-        Write-Host "$number - $($modules[$i].Name) | $($modules[$i].Power) W"
     }
 
     Write-Host ""
 
     $targetInput = Read-Host "Target PV power in kWp"
     $targetPowerKWp = Convert-ToNumber $targetInput
-
-    $moduleChoice = Read-Host "Select module number"
-    $selectedModule = $modules[[int]$moduleChoice - 1]
 
     $requiredModules = [math]::Ceiling(($targetPowerKWp * 1000) / $selectedModule.Power)
     $installedPowerKWp = [math]::Round(($requiredModules * $selectedModule.Power) / 1000, 2)
@@ -138,6 +153,133 @@ Isc: $($selectedModule.Isc) A
     Pause
 }
 
+function Show-StringDesigner {
+
+    Clear-Host
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host "               STRING DESIGNER"
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $selectedModule = Select-PVModule
+
+    if ($null -eq $selectedModule) {
+        return
+    }
+
+    Write-Host ""
+
+    $targetInput = Read-Host "Target PV power in kWp"
+    $targetPowerKWp = Convert-ToNumber $targetInput
+
+    $maxDcInput = Read-Host "Inverter maximum DC voltage in V [1000]"
+
+    if ([string]::IsNullOrWhiteSpace($maxDcInput)) {
+        $maxDcVoltage = 1000
+    }
+    else {
+        $maxDcVoltage = Convert-ToNumber $maxDcInput
+    }
+
+    $requiredModules = [math]::Ceiling(($targetPowerKWp * 1000) / $selectedModule.Power)
+    $installedPowerKWp = [math]::Round(($requiredModules * $selectedModule.Power) / 1000, 2)
+
+    $maxModulesPerString = [math]::Floor($maxDcVoltage / $selectedModule.Voc)
+
+    if ($maxModulesPerString -lt 1) {
+        Write-Host "Error: Inverter voltage is too low for this module." -ForegroundColor Red
+        Pause
+        return
+    }
+
+    $stringsNeeded = [math]::Ceiling($requiredModules / $maxModulesPerString)
+
+    $baseModulesPerString = [math]::Floor($requiredModules / $stringsNeeded)
+    $extraStrings = $requiredModules % $stringsNeeded
+
+    $highStringModules = $baseModulesPerString + 1
+
+    $baseVoc = [math]::Round($baseModulesPerString * $selectedModule.Voc, 2)
+    $baseVmp = [math]::Round($baseModulesPerString * $selectedModule.Vmp, 2)
+
+    $highVoc = [math]::Round($highStringModules * $selectedModule.Voc, 2)
+    $highVmp = [math]::Round($highStringModules * $selectedModule.Vmp, 2)
+
+    Clear-Host
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host "              STRING DESIGN RESULT"
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host ""
+
+    Write-Host "Target power:              $targetPowerKWp kWp"
+    Write-Host "Selected module:           $($selectedModule.Name)"
+    Write-Host "Module power:              $($selectedModule.Power) W"
+    Write-Host "Required modules:          $requiredModules"
+    Write-Host "Installed DC power:        $installedPowerKWp kWp"
+    Write-Host ""
+    Write-Host "Inverter max DC voltage:   $maxDcVoltage V"
+    Write-Host "Module Voc:                $($selectedModule.Voc) V"
+    Write-Host "Maximum modules/string:    $maxModulesPerString"
+    Write-Host "Required strings:          $stringsNeeded"
+    Write-Host ""
+
+    Write-Host "Proposed string layout:"
+    Write-Host ""
+
+    if ($extraStrings -gt 0) {
+        $normalStrings = $stringsNeeded - $extraStrings
+
+        Write-Host "$extraStrings string(s) x $highStringModules modules"
+        Write-Host "$normalStrings string(s) x $baseModulesPerString modules"
+        Write-Host ""
+        Write-Host "Highest string Voc:        $highVoc V"
+        Write-Host "Highest string Vmp:        $highVmp V"
+    }
+    else {
+        Write-Host "$stringsNeeded string(s) x $baseModulesPerString modules"
+        Write-Host ""
+        Write-Host "String Voc:                $baseVoc V"
+        Write-Host "String Vmp:                $baseVmp V"
+    }
+
+    Write-Host ""
+
+    if (-not (Test-Path $ReportsPath)) {
+        New-Item -ItemType Directory -Path $ReportsPath | Out-Null
+    }
+
+    $reportFile = Join-Path $ReportsPath "string-design.txt"
+
+    @"
+PV Engineer Toolkit - String Design
+
+Target power:             $targetPowerKWp kWp
+Selected module:          $($selectedModule.Name)
+Module power:             $($selectedModule.Power) W
+Required modules:         $requiredModules
+Installed DC power:       $installedPowerKWp kWp
+
+Inverter max DC voltage:  $maxDcVoltage V
+Module Voc:               $($selectedModule.Voc) V
+Module Vmp:               $($selectedModule.Vmp) V
+
+Maximum modules/string:   $maxModulesPerString
+Required strings:         $stringsNeeded
+
+Base modules/string:      $baseModulesPerString
+Extra strings:            $extraStrings
+"@ | Set-Content $reportFile
+
+    Write-Host "Report saved to: $reportFile" -ForegroundColor Yellow
+    Write-Host ""
+
+    Pause
+}
+
 do {
 
     Show-Menu
@@ -151,9 +293,7 @@ do {
         }
 
         "2" {
-            Write-Host ""
-            Write-Host "String Designer coming soon..."
-            Pause
+            Show-StringDesigner
         }
 
         "3" {
