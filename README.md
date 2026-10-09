@@ -84,3 +84,10 @@ This project is a technical prototype and not a replacement for professional PV 
 
 The current inverter data is sample data. The structure is prepared so that real manufacturer datasheets can be added later.
 
+
+## Docker Usage
+
+The toolkit can also be started using Docker Compose:
+
+```powershell
+docker compose run --rm pv-toolkit

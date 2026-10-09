@@ -1,0 +1,6 @@
+﻿services:
+  pv-toolkit:
+    build: .
+    container_name: pv-engineer-toolkit
+    stdin_open: true
+    tty: true
