@@ -58,4 +58,14 @@ Write-Host "Report generated successfully:" -ForegroundColor Green
 Write-Host $Output -ForegroundColor Yellow
 Write-Host ""
 
-Start-Process notepad.exe $Output
+if ($IsWindows) {
+    if ($IsWindows) {
+    Start-Process notepad.exe $Output
+}
+else {
+    Write-Host "Report created. Open it manually from the Reports folder." -ForegroundColor Cyan
+}
+}
+else {
+    Write-Host "Report created. Open it manually from the Reports folder." -ForegroundColor Cyan
+}

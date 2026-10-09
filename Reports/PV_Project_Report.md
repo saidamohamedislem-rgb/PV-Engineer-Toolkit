@@ -1,7 +1,7 @@
-﻿# PV Engineer Toolkit - Project Report
+# PV Engineer Toolkit - Project Report
 
 Author: Mohamed Islem Saida
-Generated: 2026-10-09 09:07
+Generated: 2026-10-09 09:40
 
 ## Project Objective
 This project demonstrates a PowerShell-based workflow for photovoltaic engineering calculations.

@@ -1,6 +1,39 @@
-﻿services:
+services:
   pv-toolkit:
     build: .
+    image: pv-engineer-toolkit:latest
     container_name: pv-engineer-toolkit
+    working_dir: /app
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+  pv-report:
+    build: .
+    image: pv-engineer-toolkit:latest
+    container_name: pv-engineer-report
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["pwsh", "-File", "./Scripts/GenerateReport.ps1"]
+
+  pv-test:
+    build: .
+    image: pv-engineer-toolkit:latest
+    container_name: pv-engineer-test
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["pwsh", "-File", "./Scripts/TestProject.ps1"]
+
+  pv-shell:
+    build: .
+    image: pv-engineer-toolkit:latest
+    container_name: pv-engineer-shell
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["pwsh"]
     stdin_open: true
     tty: true
